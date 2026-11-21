@@ -1,4 +1,14 @@
 import { defineConfig } from 'vite';
+import { rmSync } from 'node:fs';
+
+// GRID data licence: the pro pack must never end up in a build that gets hosted.
+// Local booth builds can keep it with INCLUDE_PRO_PACK=1.
+const dropProPack = () => ({
+    name: 'drop-pro-pack',
+    closeBundle() {
+        if (process.env.INCLUDE_PRO_PACK !== '1') rmSync('dist/packs/pro', { recursive: true, force: true });
+    }
+});
 
 const phasermsg = () => {
     return {
@@ -42,6 +52,7 @@ export default defineConfig({
         port: 8080
     },
     plugins: [
-        phasermsg()
+        phasermsg(),
+        dropProPack()
     ]
 });

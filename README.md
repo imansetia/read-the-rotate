@@ -2,7 +2,21 @@
 
 Booth mini game for the **Cloud9 x JetBrains: Sky's The Limit Hackathon 2026**, Category 3 (Event Mini Game).
 
-You see a pro VALORANT round on an abstract radar, a few seconds before the plant. You call the site with one click. Then the round plays out and shows whether you read it like a pro. Ten rounds, about two minutes.
+You see a pro VALORANT round on an abstract radar, 12 to 30 seconds before the plant. You call the site with one click. Then the round plays out and shows whether you read it like a pro. Ten rounds, about two minutes.
+
+## How a session plays
+
+`menu → 10 rounds → final score → menu`
+
+Each round:
+
+1. **Read** (6 s): the radar shows attackers (orange), defenders (green) and the sites. A solid dot is a fresh position; a faded dot with a label (`6s`) is where that player was last seen; `?` means the position is too old to trust; `X` is a dead player.
+2. **Call**: click a site. No click before the bar runs out counts as a miss.
+3. **Reveal**: the rest of the round replays at 4x speed until the bomb (amber triangle) goes down. The real site gets a green ring, a wrong call a red one.
+
+Scoring: 100 for a correct call, up to +50 for calling fast, +20 per answer in a streak. Rounds 1-3 show the radar 12-16 s before the plant, rounds 4-7 at 17-22 s, rounds 8-10 at 23-30 s, so it gets harder.
+
+Mouse only. The canvas scales to any screen.
 
 ## Layout
 
@@ -23,8 +37,11 @@ Requires Node 22+.
 ```bash
 npm install
 npm run dev      # http://localhost:8080
+npm test         # game rules (plain node, no extra deps)
 npm run build    # typecheck + production build into dist/
 ```
+
+The game loads `public/packs/pro/scenarios.json` (built from GRID data, see below) and falls back to `public/packs/demo/scenarios.json`. A production build **drops the pro pack** so a hosted `dist/` never contains GRID data. For a local booth build that should keep it, run `INCLUDE_PRO_PACK=1 npm run build` and never upload that `dist/`.
 
 ## Data pipeline
 

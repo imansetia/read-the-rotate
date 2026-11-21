@@ -6,7 +6,7 @@ import unittest
 
 import zstandard
 
-from extract_scenarios import assign_sites, extract_series, kmeans
+from extract_scenarios import assign_sites, extract_series, kmeans, pick_snapshots
 
 MAP = {"name": "testmap", "bounds": {"min": {"x": 0, "y": 0}, "max": {"x": 100, "y": 100}}}
 
@@ -73,6 +73,15 @@ class ExtractTest(unittest.TestCase):
             (60, event("player-completed-plantBomb", state("g2", "round-1"), planter(20, 80))),
         ])
         self.assertEqual(found, [])
+
+    def test_snapshot_picks_moment_with_most_known_players(self):
+        # Plant at 40 s. Everyone is seen at 0 s and again at 20 s (20 s before the plant: tier 2).
+        player = {"track": [[0.0, 0, 0, True], [20.0, 1, 1, True]]}
+        scenario = {"plant": {"t": 40.0}, "players": [player] * 10}
+        snaps = pick_snapshots(scenario)
+        self.assertEqual(snaps["2"], 20.0)  # freshest moment in tier 2's 17-22 s window
+        self.assertNotIn("1", snaps)  # 12-16 s before: the 20 s sighting is already 4+ s old
+        self.assertNotIn("3", snaps)  # 23-30 s before: only the 0 s sighting, 10+ s old
 
     def test_sites_cluster_and_label(self):
         self.assertEqual(sorted(kmeans([(0, 0), (1, 1), (100, 100), (101, 99)], 2)), [(0.5, 0.5), (100.5, 99.5)])

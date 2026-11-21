@@ -1,11 +1,8 @@
-import { Scene, GameObjects } from 'phaser';
+import { Scene } from 'phaser';
+import { COLORS, FONT } from '../theme';
 
 export class MainMenu extends Scene
 {
-    background: GameObjects.Image;
-    logo: GameObjects.Image;
-    title: GameObjects.Text;
-
     constructor ()
     {
         super('MainMenu');
@@ -13,20 +10,16 @@ export class MainMenu extends Scene
 
     create ()
     {
-        this.background = this.add.image(512, 384, 'background');
-
-        this.logo = this.add.image(512, 300, 'logo');
-
-        this.title = this.add.text(512, 460, 'Main Menu', {
-            fontFamily: 'Arial Black', fontSize: 38, color: '#ffffff',
-            stroke: '#000000', strokeThickness: 8,
-            align: 'center'
+        this.add.text(512, 250, 'Read the Rotate', { fontFamily: FONT, fontSize: '72px', color: COLORS.text }).setOrigin(0.5);
+        this.add.text(512, 330, 'Real pro rounds. Can you call the site before they plant?', {
+            fontFamily: FONT, fontSize: '24px', color: COLORS.muted,
         }).setOrigin(0.5);
+        this.add.text(512, 430, '10 rounds  ·  6 seconds each  ·  click a site', {
+            fontFamily: FONT, fontSize: '22px', color: COLORS.siteText,
+        }).setOrigin(0.5);
+        const start = this.add.text(512, 560, 'Click to start', { fontFamily: FONT, fontSize: '32px', color: COLORS.text }).setOrigin(0.5);
+        this.tweens.add({ targets: start, alpha: 0.3, duration: 700, yoyo: true, repeat: -1 });
 
-        this.input.once('pointerdown', () => {
-
-            this.scene.start('Game');
-
-        });
+        this.input.once('pointerdown', () => this.scene.start('Game'));
     }
 }

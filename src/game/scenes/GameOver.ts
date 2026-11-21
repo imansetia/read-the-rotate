@@ -1,35 +1,27 @@
 import { Scene } from 'phaser';
+import { COLORS, FONT } from '../theme';
 
 export class GameOver extends Scene
 {
-    camera: Phaser.Cameras.Scene2D.Camera;
-    background: Phaser.GameObjects.Image;
-    gameover_text : Phaser.GameObjects.Text;
-
     constructor ()
     {
         super('GameOver');
     }
 
-    create ()
+    create ({ score, correct, total }: { score: number; correct: number; total: number })
     {
-        this.camera = this.cameras.main
-        this.camera.setBackgroundColor(0xff0000);
+        this.add.text(512, 220, 'Final score', { fontFamily: FONT, fontSize: '32px', color: COLORS.muted }).setOrigin(0.5);
+        this.add.text(512, 310, `${score}`, { fontFamily: FONT, fontSize: '96px', color: COLORS.text }).setOrigin(0.5);
+        this.add.text(512, 410, `You read ${correct} of ${total} rounds like a pro`, {
+            fontFamily: FONT, fontSize: '28px', color: COLORS.siteText,
+        }).setOrigin(0.5);
+        const again = this.add.text(512, 560, 'Click to play again', { fontFamily: FONT, fontSize: '28px', color: COLORS.text })
+            .setOrigin(0.5).setAlpha(0);
 
-        this.background = this.add.image(512, 384, 'background');
-        this.background.setAlpha(0.5);
-
-        this.gameover_text = this.add.text(512, 384, 'Game Over', {
-            fontFamily: 'Arial Black', fontSize: 64, color: '#ffffff',
-            stroke: '#000000', strokeThickness: 8,
-            align: 'center'
-        });
-        this.gameover_text.setOrigin(0.5);
-
-        this.input.once('pointerdown', () => {
-
-            this.scene.start('MainMenu');
-
+        // Short pause so a click meant for the last round does not skip this screen.
+        this.time.delayedCall(1500, () => {
+            again.setAlpha(1);
+            this.input.once('pointerdown', () => this.scene.start('MainMenu'));
         });
     }
 }

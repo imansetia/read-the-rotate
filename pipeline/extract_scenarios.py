@@ -20,6 +20,11 @@ DATA_DIR = pathlib.Path(os.environ.get("STL_DATA_DIR", "../stl-hackathon-2026-gr
 OUT = pathlib.Path(__file__).resolve().parent.parent / "public" / "packs" / "pro" / "scenarios.json"
 REVEAL_TAIL = 5.0  # seconds of tracks kept after the plant, for the reveal animation
 THREE_SITE_MAPS = {"haven", "lotus"}
+# Difficulty tier -> (min, max) seconds before the plant to show the radar. Earlier = fewer clues.
+# At 6-11 s attackers were often already standing on the site, so even tier 1 starts earlier.
+TIERS = {"1": (12, 16), "2": (17, 22), "3": (23, 30)}
+FRESH = 4.0  # a position younger than this counts as known
+MIN_KNOWN = 7  # players (of 10) whose position is fresh, or who are dead, at the snapshot
 
 
 def ts(iso):
@@ -105,6 +110,33 @@ def extract_series(path, valid_games):
     return scenarios
 
 
+def known_at(scenario, t):
+    """(players we can place with confidence, -total position age) at time t; None if someone has no position yet."""
+    known = age = 0
+    for p in scenario["players"]:
+        seen = [pt for pt in p["track"] if pt[0] <= t]
+        if not seen:
+            return None
+        known += (t - seen[-1][0] < FRESH) or not seen[-1][3]
+        age += t - seen[-1][0]
+    return known, -age
+
+
+def pick_snapshots(scenario):
+    """Per tier, the moment (seconds after buy phase) with the most known players. Tiers that fall short are left out."""
+    snaps = {}
+    for tier, (lo, hi) in TIERS.items():
+        best = None
+        for half_secs in range(lo * 2, hi * 2 + 1):
+            t = round(scenario["plant"]["t"] - half_secs / 2, 1)
+            score = known_at(scenario, t) if t >= 0 else None
+            if score and score[0] >= MIN_KNOWN and (best is None or score > best[0]):
+                best = (score, t)
+        if best:
+            snaps[tier] = best[1]
+    return snaps
+
+
 def kmeans(points, k, iters=25):
     """Plain k-means with farthest-point init, so results are deterministic."""
     centers = [points[0]]
@@ -160,8 +192,11 @@ def main():
     scenarios = []
     for i, row in enumerate(rows, 1):
         found = extract_series(DATA_DIR / row["file"], valid_games)
-        print(f"[{i}/{len(rows)}] {row['series_id']} {row['event']}: {len(found)} scenarios")
-        scenarios += found
+        for s in found:
+            s["snaps"] = pick_snapshots(s)
+        playable = [s for s in found if s["snaps"]]
+        print(f"[{i}/{len(rows)}] {row['series_id']} {row['event']}: {len(playable)}/{len(found)} playable")
+        scenarios += playable
 
     maps = assign_sites(scenarios)
 
