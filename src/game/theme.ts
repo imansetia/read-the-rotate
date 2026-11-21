@@ -1,20 +1,54 @@
-// Original palette; no Riot colours or assets.
-export const FONT = 'system-ui, -apple-system, "Segoe UI", sans-serif';
+// Stadium LED board with whiteboard magnets for players. Original palette and fonts (OFL); no Riot colours or assets.
+import type { GameObjects, Scene } from 'phaser';
+
+export const LED = '"Doto", monospace';
+export const HAND = '"Kalam", cursive';
 
 export const COLORS = {
-    background: '#0b1016',
-    radar: 0x111820,
-    grid: 0x1c2630,
-    site: 0x7f77dd,
-    siteText: '#cecbf6',
-    atk: 0xd85a30,
-    def: 0x1d9e75,
-    dead: 0x5f5e5a,
-    bomb: 0xef9f27,
-    text: '#e8e6df',
-    muted: '#9a9890',
-    good: '#97c459',
-    goodHex: 0x97c459,
-    bad: '#f09595',
-    badHex: 0xf09595,
+    background: '#0c0d0e',
+    ledOff: 0x1d2023,
+    frame: 0x2a2e33,
+    amber: 0xffb000,
+    amberText: '#ffb000',
+    amberOff: 0x3a2a08,
+    label: '#8a8f94',
+    atk: 0xe2384a,
+    atkRim: 0x8c1424,
+    atkText: '#ff7482',
+    def: 0x3d74e8,
+    defRim: 0x163a8a,
+    defText: '#86a9ff',
+    dead: 0x6b7075,
+    bomb: 0xf5f3ea,
+    text: '#e9e7e1',
+    good: '#2be07a',
+    goodHex: 0x2be07a,
+    bad: '#ff3b30',
+    badHex: 0xff3b30,
 };
+
+/** Unlit LED dots across the whole screen, drawn once into a tiled texture. */
+export function ledBackdrop (scene: Scene)
+{
+    if (!scene.textures.exists('led')) {
+        const g = scene.make.graphics({}, false).fillStyle(COLORS.ledOff).fillCircle(4, 4, 1.4);
+        g.generateTexture('led', 8, 8);
+        g.destroy();
+    }
+    scene.add.tileSprite(0, 0, 1024, 768, 'led').setOrigin(0);
+}
+
+/** A circle drawn the way an LED board draws one: a ring of dots. */
+export function dotRing (g: GameObjects.Graphics, x: number, y: number, r: number, color: number,
+    { alpha = 1, size = 2.2, gap = 9 } = {})
+{
+    const n = Math.max(10, Math.round((2 * Math.PI * r) / gap));
+    g.fillStyle(color, alpha);
+    for (let i = 0; i < n; i++) g.fillCircle(x + r * Math.cos((2 * Math.PI * i) / n), y + r * Math.sin((2 * Math.PI * i) / n), size);
+}
+
+/** A whiteboard magnet: dark rim, coloured face, a small glint. */
+export function magnet (g: GameObjects.Graphics, x: number, y: number, face: number, rim: number)
+{
+    g.fillStyle(rim).fillCircle(x, y, 11).fillStyle(face).fillCircle(x, y, 9).fillStyle(0xffffff, 0.35).fillCircle(x - 3, y - 3, 2.5);
+}

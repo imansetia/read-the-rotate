@@ -1,9 +1,9 @@
 import { Scene, GameObjects } from 'phaser';
 import {
     CHOOSE_SECONDS, FRESH_SECONDS, ROUND_TIERS, UNKNOWN_SECONDS,
-    lastSeen, pickRounds, positionAt, scoreFor, type Pack, type Round,
+    lastSeen, makeProjection, pickRounds, positionAt, scoreFor, type Pack, type Round,
 } from '../scenarios';
-import { COLORS, FONT } from '../theme';
+import { COLORS, HAND, LED, dotRing, ledBackdrop, magnet } from '../theme';
 
 const RADAR = { x: 32, y: 60, size: 660 };
 const SITE_RADIUS = 1800; // world units, about 18 m
@@ -29,7 +29,9 @@ export class Game extends Scene
     gfx: GameObjects.Graphics;
     dotLabels: GameObjects.Text[];
     siteLabels: GameObjects.Text[];
-    hud: GameObjects.Text;
+    roundText: GameObjects.Text;
+    scoreText: GameObjects.Text;
+    streakText: GameObjects.Text[];
     prompt: GameObjects.Text;
 
     constructor ()
@@ -42,19 +44,27 @@ export class Game extends Scene
         this.rounds = pickRounds(this.registry.get('pack') as Pack);
         this.index = this.score = this.streak = this.correct = 0;
 
+        ledBackdrop(this);
         this.gfx = this.add.graphics();
         this.dotLabels = Array.from({ length: 10 }, () =>
-            this.add.text(0, 0, '', { fontFamily: FONT, fontSize: '13px', color: COLORS.muted }).setOrigin(0.5));
+            this.add.text(0, 0, '', { fontFamily: HAND, fontSize: '17px', color: COLORS.text }).setOrigin(0.5));
         this.siteLabels = Array.from({ length: 3 }, () =>
-            this.add.text(0, 0, '', { fontFamily: FONT, fontSize: '28px', color: COLORS.siteText }).setOrigin(0.5));
-        this.hud = this.add.text(740, 64, '', { fontFamily: FONT, fontSize: '22px', color: COLORS.text, lineSpacing: 10 });
-        this.prompt = this.add.text(RADAR.x, 24, '', { fontFamily: FONT, fontSize: '24px', color: COLORS.text });
+            this.add.text(0, 0, '', { fontFamily: LED, fontSize: '40px', color: COLORS.amberText }).setOrigin(0.5));
+        const led = (y: number, size: number, color: string, text = '') =>
+            this.add.text(740, y, text, { fontFamily: LED, fontSize: `${size}px`, color });
+        led(64, 20, COLORS.label, 'ROUND');
+        this.roundText = led(90, 48, COLORS.amberText);
+        led(170, 20, COLORS.label, 'SCORE');
+        this.scoreText = led(196, 48, COLORS.amberText);
+        this.streakText = [led(276, 20, COLORS.label, 'STREAK'), led(302, 48, COLORS.amberText)];
+        this.prompt = this.add.text(RADAR.x, 18, '', { fontFamily: LED, fontSize: '28px', color: COLORS.amberText });
+        // Notes in marker, like a coach's whiteboard next to the board.
         const legend: [string, string][] = [
-            ['Attackers', '#d85a30'], ['Defenders', '#1d9e75'], ['', ''],
-            ['Faded: last seen', COLORS.muted], ['?: position unknown', COLORS.muted], ['X: dead', COLORS.muted],
+            ['red: attackers', COLORS.atkText], ['blue: defenders', COLORS.defText], ['', ''],
+            ['dotted: last seen', COLORS.text], ['?: position unknown', COLORS.text], ['x: dead', COLORS.text],
         ];
         legend.forEach(([text, color], i) =>
-            this.add.text(740, 520 + i * 28, text, { fontFamily: FONT, fontSize: '18px', color }));
+            this.add.text(740, 520 + i * 30, text, { fontFamily: HAND, fontSize: '21px', color }));
 
         this.input.on('pointerdown', (p: Phaser.Input.Pointer) => this.onClick(p.x, p.y));
         this.startRound();
@@ -68,25 +78,14 @@ export class Game extends Scene
         this.phase = 'choose';
         this.phaseStart = this.game.loop.time;
         this.picked = undefined;
-        this.prompt.setText('Where will they plant? Click a site.');
+        this.prompt.setText('WHERE WILL THEY PLANT?');
     }
 
-    /** Fit the map into the radar square, attackers' spawn at the bottom. */
     setProjection ({ scenario }: Round)
     {
-        const { bounds, sites } = (this.registry.get('pack') as Pack).maps[scenario.map];
-        const xs = [bounds.min.x, bounds.max.x, ...sites.map(s => s.x - SITE_RADIUS), ...sites.map(s => s.x + SITE_RADIUS)];
-        const ys = [bounds.min.y, bounds.max.y, ...sites.map(s => s.y - SITE_RADIUS), ...sites.map(s => s.y + SITE_RADIUS)];
-        const [minX, maxX, minY, maxY] = [Math.min(...xs), Math.max(...xs), Math.min(...ys), Math.max(...ys)];
-        const span = Math.max(maxX - minX, maxY - minY);
-        const k = (RADAR.size - 40) / span;
-        const cx = (minX + maxX) / 2, cy = (minY + maxY) / 2;
-        const atk = scenario.players.filter(p => p.side === 'atk').map(p => p.track[0]);
-        const atkY = atk.reduce((sum, p) => sum + p[2], 0) / atk.length;
-        const flip = atkY > cy ? -1 : 1; // screen y grows down: attackers should end up below the centre
-        const mid = RADAR.size / 2;
-        this.project = (x, y) => ({ x: RADAR.x + mid + flip * (x - cx) * k, y: RADAR.y + mid + flip * (cy - y) * k });
-        this.unitPx = k;
+        const { project, unitPx } = makeProjection((this.registry.get('pack') as Pack).maps[scenario.map], scenario, RADAR.size, SITE_RADIUS);
+        this.project = (x, y) => { const p = project(x, y); return { x: RADAR.x + p.x, y: RADAR.y + p.y }; };
+        this.unitPx = unitPx;
     }
 
     onClick (x: number, y: number)
@@ -112,7 +111,7 @@ export class Game extends Scene
         this.picked = site;
         this.phase = 'reveal';
         this.phaseStart = this.game.loop.time;
-        this.prompt.setText(site ? `You called ${site}. Watch the round...` : 'Time is up. Watch the round...');
+        this.prompt.setText(site ? `YOU CALLED ${site}. WATCH...` : 'TIME IS UP. WATCH...');
     }
 
     update ()
@@ -131,13 +130,13 @@ export class Game extends Scene
                 this.phase = 'result';
                 this.phaseStart = this.game.loop.time;
                 const right = this.picked === scenario.site;
-                this.prompt.setText(right ? `Correct! +${this.gained}` : `They planted on ${scenario.site}.`);
+                this.prompt.setText(right ? `CORRECT +${this.gained}` : `THEY PLANTED ON ${scenario.site}`);
                 this.prompt.setColor(right ? COLORS.good : COLORS.bad);
             }
         } else if (elapsed < RESULT_SECONDS) {
             this.draw(end, true); // same frame as the reveal's last, now with the answer rings
         } else {
-            this.prompt.setColor(COLORS.text);
+            this.prompt.setColor(COLORS.amberText);
             this.index++;
             if (this.index < this.rounds.length) this.startRound();
             else this.scene.start('GameOver', { score: this.score, correct: this.correct, total: this.rounds.length });
@@ -150,13 +149,7 @@ export class Game extends Scene
         const sites = (this.registry.get('pack') as Pack).maps[scenario.map].sites;
         const g = this.gfx.clear();
 
-        g.fillStyle(COLORS.radar).fillRect(RADAR.x, RADAR.y, RADAR.size, RADAR.size);
-        g.lineStyle(1, COLORS.grid);
-        for (let i = 1; i < 8; i++) {
-            const o = (RADAR.size / 8) * i;
-            g.lineBetween(RADAR.x + o, RADAR.y, RADAR.x + o, RADAR.y + RADAR.size);
-            g.lineBetween(RADAR.x, RADAR.y + o, RADAR.x + RADAR.size, RADAR.y + o);
-        }
+        g.lineStyle(1, COLORS.frame).strokeRect(RADAR.x, RADAR.y, RADAR.size, RADAR.size);
 
         const showAnswer = this.phase === 'result';
         this.siteLabels.forEach((label, i) => {
@@ -166,47 +159,52 @@ export class Game extends Scene
             const p = this.project(s.x, s.y);
             const answer = showAnswer && s.label === scenario.site;
             const wrongPick = showAnswer && s.label === this.picked && !answer;
-            g.fillStyle(COLORS.site, s.label === this.picked || answer ? 0.35 : 0.14).fillCircle(p.x, p.y, SITE_RADIUS * this.unitPx);
-            g.lineStyle(answer || wrongPick ? 4 : 1, answer ? COLORS.goodHex : wrongPick ? COLORS.badHex : COLORS.site)
-                .strokeCircle(p.x, p.y, SITE_RADIUS * this.unitPx);
+            const r = SITE_RADIUS * this.unitPx;
+            if (s.label === this.picked || answer) g.fillStyle(COLORS.amber, 0.1).fillCircle(p.x, p.y, r);
+            dotRing(g, p.x, p.y, r, answer ? COLORS.goodHex : wrongPick ? COLORS.badHex : COLORS.amber,
+                { size: answer || wrongPick || s.label === this.picked ? 3.2 : 2.2 });
             label.setText(s.label).setPosition(p.x, p.y);
         });
 
         scenario.players.forEach((player, i) => {
-            const color = player.side === 'atk' ? COLORS.atk : COLORS.def;
-            const label = this.dotLabels[i].setText('');
+            const atk = player.side === 'atk';
+            const color = atk ? COLORS.atk : COLORS.def;
+            const label = this.dotLabels[i].setText('').setColor(atk ? COLORS.atkText : COLORS.defText);
             const seen = replay ? { ...positionAt(player.track, t), age: 0 } : lastSeen(player.track, t);
             if (!seen) return;
             const p = this.project(seen.x, seen.y);
-            label.setPosition(p.x, p.y - 20);
+            label.setPosition(p.x, p.y - 22);
             if (!seen.alive) {
                 g.lineStyle(3, COLORS.dead).lineBetween(p.x - 7, p.y - 7, p.x + 7, p.y + 7).lineBetween(p.x + 7, p.y - 7, p.x - 7, p.y + 7);
             } else if (seen.age < FRESH_SECONDS) {
-                g.fillStyle(color).fillCircle(p.x, p.y, 9);
+                magnet(g, p.x, p.y, color, atk ? COLORS.atkRim : COLORS.defRim);
             } else if (seen.age < UNKNOWN_SECONDS) {
-                g.fillStyle(color, 0.3).fillCircle(p.x, p.y, 9).lineStyle(2, color, 0.8).strokeCircle(p.x, p.y, 9);
+                dotRing(g, p.x, p.y, 10, color, { size: 1.8, gap: 5 });
                 label.setText(`${Math.round(seen.age)}s`);
             } else {
-                g.lineStyle(2, color, 0.5).strokeCircle(p.x, p.y, 13);
+                dotRing(g, p.x, p.y, 13, color, { alpha: 0.5, size: 1.6, gap: 6 });
                 label.setText('?').setPosition(p.x, p.y);
             }
         });
 
         if (replay && t >= scenario.plant.t) {
             const p = this.project(scenario.plant.x, scenario.plant.y);
-            g.fillStyle(COLORS.bomb).fillTriangle(p.x, p.y - 12, p.x + 10, p.y + 8, p.x - 10, p.y + 8);
+            // Dark outline keeps the bomb readable when it lands on the site letter.
+            g.lineStyle(4, 0x0c0d0e).strokeTriangle(p.x, p.y - 14, p.x + 12, p.y + 9, p.x - 12, p.y + 9)
+                .fillStyle(COLORS.bomb).fillTriangle(p.x, p.y - 14, p.x + 12, p.y + 9, p.x - 12, p.y + 9);
         }
 
         if (this.phase === 'choose') {
-            const left = Math.max(0, this.secondsLeft());
-            g.fillStyle(COLORS.grid).fillRect(RADAR.x, RADAR.y + RADAR.size + 16, RADAR.size, 10);
-            g.fillStyle(COLORS.site).fillRect(RADAR.x, RADAR.y + RADAR.size + 16, RADAR.size * left / CHOOSE_SECONDS, 10);
+            const n = 48, lit = Math.ceil((n * Math.max(0, this.secondsLeft())) / CHOOSE_SECONDS);
+            for (let i = 0; i < n; i++) {
+                g.fillStyle(i < lit ? COLORS.amber : COLORS.amberOff)
+                    .fillCircle(RADAR.x + 6 + (i * (RADAR.size - 12)) / (n - 1), RADAR.y + RADAR.size + 22, 4);
+            }
         }
 
-        this.hud.setText([
-            `Round ${this.index + 1}/${ROUND_TIERS.length}`,
-            `Score ${this.score}`,
-            this.streak > 1 ? `Streak x${this.streak}` : '',
-        ].join('\n'));
+        this.roundText.setText(`${String(this.index + 1).padStart(2, '0')}/${ROUND_TIERS.length}`);
+        this.scoreText.setText(String(this.score).padStart(4, '0'));
+        this.streakText[1].setText(`x${this.streak}`);
+        this.streakText.forEach(text => text.setVisible(this.streak > 1));
     }
 }

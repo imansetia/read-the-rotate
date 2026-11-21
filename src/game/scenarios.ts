@@ -62,3 +62,39 @@ export function scoreFor (correct: boolean, secondsLeft: number, streak: number)
     if (!correct) return 0;
     return 100 + Math.round(50 * Math.max(0, secondsLeft) / CHOOSE_SECONDS) + 20 * Math.max(0, streak - 1);
 }
+
+/**
+ * Map world coordinates onto a square radar of `size` px. The map is turned so its two farthest-apart sites sit
+ * level, then flipped if needed so the attackers' spawn is at the bottom. The turn depends only on the map's sites
+ * (plus which side the attackers start), so a map looks the same every round. Rotation only, never a mirror, so
+ * the map keeps its real left and right.
+ */
+export function makeProjection (map: MapInfo, scenario: Scenario, size: number, siteRadius: number)
+{
+    let [p, q] = [map.sites[0], map.sites[1]];
+    for (const a of map.sites) for (const b of map.sites) if (Math.hypot(a.x - b.x, a.y - b.y) > Math.hypot(p.x - q.x, p.y - q.y)) [p, q] = [a, b];
+    let turn = -Math.atan2(q.y - p.y, q.x - p.x);
+    const rot = (x: number, y: number) => [x * Math.cos(turn) - y * Math.sin(turn), x * Math.sin(turn) + y * Math.cos(turn)];
+    const atk = scenario.players.filter(pl => pl.side === 'atk').map(pl => rot(pl.track[0][1], pl.track[0][2])[1]);
+    const sites = map.sites.map(s => rot(s.x, s.y)[1]);
+    const mean = (v: number[]) => v.reduce((a, b) => a + b, 0) / v.length;
+    if (mean(atk) > mean(sites)) turn += Math.PI; // world y points up: attackers belong below the sites
+
+    // Fit the map, the sites and every recorded position (a few GRID positions fall outside the map bounds).
+    const { min, max } = map.bounds;
+    const pts = [[min.x, min.y], [min.x, max.y], [max.x, min.y], [max.x, max.y]].map(([x, y]) => rot(x, y));
+    for (const s of map.sites) {
+        const [x, y] = rot(s.x, s.y);
+        pts.push([x - siteRadius, y - siteRadius], [x + siteRadius, y + siteRadius]);
+    }
+    for (const pl of scenario.players) for (const t of pl.track) pts.push(rot(t[1], t[2]));
+    const xs = pts.map(pt => pt[0]), ys = pts.map(pt => pt[1]);
+    const [minX, maxX, minY, maxY] = [Math.min(...xs), Math.max(...xs), Math.min(...ys), Math.max(...ys)];
+    const unitPx = (size - 40) / Math.max(maxX - minX, maxY - minY);
+    const cx = (minX + maxX) / 2, cy = (minY + maxY) / 2;
+    const project = (x: number, y: number) => {
+        const [rx, ry] = rot(x, y);
+        return { x: size / 2 + (rx - cx) * unitPx, y: size / 2 - (ry - cy) * unitPx }; // screen y grows down
+    };
+    return { project, unitPx };
+}
