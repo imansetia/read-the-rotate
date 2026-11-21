@@ -1,0 +1,6 @@
+#!/bin/sh
+# The author does not want AI tools credited as GitHub contributors.
+if grep -Eiq 'co-authored-by:.*(claude|anthropic|junie|copilot|codex)|noreply@anthropic\.com|generated with \[?claude' "$1"; then
+  echo "BLOCKED: remove the AI co-author / attribution line from the commit message." >&2
+  exit 1
+fi

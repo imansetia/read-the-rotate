@@ -1,0 +1,20 @@
+{
+  "name": "read-the-rotate",
+  "description": "Booth mini game: read a pro VALORANT round from the radar and call the site.",
+  "version": "0.1.0",
+  "license": "MIT",
+  "scripts": {
+    "dev": "vite --config vite/config.dev.mjs",
+    "build": "tsc --noEmit && vite build --config vite/config.prod.mjs",
+    "check-data": "sh scripts/check-no-data.sh"
+  },
+  "devDependencies": {
+    "typescript": "~5.7.2",
+    "vite": "^6.3.1"
+  },
+  "dependencies": {
+    "phaser": "4.0.0",
+    "terser": "^5.39.0"
+  },
+  "private": true
+}
