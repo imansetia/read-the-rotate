@@ -1,12 +1,10 @@
 import { Scene, GameObjects } from 'phaser';
-import {
-    CHOOSE_SECONDS, FRESH_SECONDS, ROUND_TIERS, UNKNOWN_SECONDS,
-    lastSeen, makeProjection, pickRounds, positionAt, scoreFor, type Pack, type Round,
-} from '../scenarios';
-import { COLORS, HAND, LED, dotRing, ledBackdrop, magnet } from '../theme';
+import { idleReset } from '../booth';
+import { SITE_RADIUS, drawBomb, drawPlayers, drawSites } from '../radar';
+import { CHOOSE_SECONDS, ROUND_TIERS, makeProjection, pickRounds, scoreFor, type Pack, type Round } from '../scenarios';
+import { COLORS, HAND, LED, ledBackdrop } from '../theme';
 
 const RADAR = { x: 32, y: 60, size: 660 };
-const SITE_RADIUS = 1800; // world units, about 18 m
 const REVEAL_SPEED = 4;
 const RESULT_SECONDS = 2;
 
@@ -67,6 +65,7 @@ export class Game extends Scene
             this.add.text(740, 520 + i * 30, text, { fontFamily: HAND, fontSize: '21px', color }));
 
         this.input.on('pointerdown', (p: Phaser.Input.Pointer) => this.onClick(p.x, p.y));
+        idleReset(this, 30); // about three unanswered rounds: the player has left
         this.startRound();
     }
 
@@ -152,47 +151,13 @@ export class Game extends Scene
         g.lineStyle(1, COLORS.frame).strokeRect(RADAR.x, RADAR.y, RADAR.size, RADAR.size);
 
         const showAnswer = this.phase === 'result';
-        this.siteLabels.forEach((label, i) => {
-            const s = sites[i];
-            label.setVisible(!!s);
-            if (!s) return;
-            const p = this.project(s.x, s.y);
-            const answer = showAnswer && s.label === scenario.site;
-            const wrongPick = showAnswer && s.label === this.picked && !answer;
-            const r = SITE_RADIUS * this.unitPx;
-            if (s.label === this.picked || answer) g.fillStyle(COLORS.amber, 0.1).fillCircle(p.x, p.y, r);
-            dotRing(g, p.x, p.y, r, answer ? COLORS.goodHex : wrongPick ? COLORS.badHex : COLORS.amber,
-                { size: answer || wrongPick || s.label === this.picked ? 3.2 : 2.2 });
-            label.setText(s.label).setPosition(p.x, p.y);
+        drawSites(g, this.siteLabels, sites, this.project, this.unitPx, label => {
+            const answer = showAnswer && label === scenario.site;
+            const wrongPick = showAnswer && label === this.picked && !answer;
+            return { color: answer ? COLORS.goodHex : wrongPick ? COLORS.badHex : COLORS.amber, strong: answer || label === this.picked };
         });
-
-        scenario.players.forEach((player, i) => {
-            const atk = player.side === 'atk';
-            const color = atk ? COLORS.atk : COLORS.def;
-            const label = this.dotLabels[i].setText('').setColor(atk ? COLORS.atkText : COLORS.defText);
-            const seen = replay ? { ...positionAt(player.track, t), age: 0 } : lastSeen(player.track, t);
-            if (!seen) return;
-            const p = this.project(seen.x, seen.y);
-            label.setPosition(p.x, p.y - 22);
-            if (!seen.alive) {
-                g.lineStyle(3, COLORS.dead).lineBetween(p.x - 7, p.y - 7, p.x + 7, p.y + 7).lineBetween(p.x + 7, p.y - 7, p.x - 7, p.y + 7);
-            } else if (seen.age < FRESH_SECONDS) {
-                magnet(g, p.x, p.y, color, atk ? COLORS.atkRim : COLORS.defRim);
-            } else if (seen.age < UNKNOWN_SECONDS) {
-                dotRing(g, p.x, p.y, 10, color, { size: 1.8, gap: 5 });
-                label.setText(`${Math.round(seen.age)}s`);
-            } else {
-                dotRing(g, p.x, p.y, 13, color, { alpha: 0.5, size: 1.6, gap: 6 });
-                label.setText('?').setPosition(p.x, p.y);
-            }
-        });
-
-        if (replay && t >= scenario.plant.t) {
-            const p = this.project(scenario.plant.x, scenario.plant.y);
-            // Dark outline keeps the bomb readable when it lands on the site letter.
-            g.lineStyle(4, 0x0c0d0e).strokeTriangle(p.x, p.y - 14, p.x + 12, p.y + 9, p.x - 12, p.y + 9)
-                .fillStyle(COLORS.bomb).fillTriangle(p.x, p.y - 14, p.x + 12, p.y + 9, p.x - 12, p.y + 9);
-        }
+        drawPlayers(g, this.dotLabels, scenario, t, replay, this.project);
+        if (replay) drawBomb(g, scenario, t, this.project);
 
         if (this.phase === 'choose') {
             const n = 48, lit = Math.ceil((n * Math.max(0, this.secondsLeft())) / CHOOSE_SECONDS);

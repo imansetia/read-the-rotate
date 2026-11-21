@@ -6,17 +6,25 @@ You see a pro VALORANT round on an abstract radar, 12 to 30 seconds before the p
 
 ## How a session plays
 
-`menu → 10 rounds → final score → menu`
+`menu → 10 rounds → final score (initials if top 10) → menu`
 
 Each round:
 
-1. **Read** (6 s): the radar shows attackers (orange), defenders (green) and the sites. A solid dot is a fresh position; a faded dot with a label (`6s`) is where that player was last seen; `?` means the position is too old to trust; `X` is a dead player.
-2. **Call**: click a site. No click before the bar runs out counts as a miss.
-3. **Reveal**: the rest of the round replays at 4x speed until the bomb (amber triangle) goes down. The real site gets a green ring, a wrong call a red one.
+1. **Read** (6 s): the radar shows attackers (red magnets), defenders (blue magnets) and the sites. A solid magnet is a fresh position; a dotted ring with a label (`6s`) is where that player was last seen; `?` means the position is too old to trust; `x` is a dead player. The map is turned so attackers start at the bottom and the sites sit side by side above them.
+2. **Call**: click a site. No click before the LED bar runs out counts as a miss.
+3. **Reveal**: the rest of the round replays at 4x speed until the bomb (white triangle) goes down. The real site gets a green ring, a wrong call a red one.
 
 Scoring: 100 for a correct call, up to +50 for calling fast, +20 per answer in a streak. Rounds 1-3 show the radar 12-16 s before the plant, rounds 4-7 at 17-22 s, rounds 8-10 at 23-30 s, so it gets harder.
 
 Mouse only. The canvas scales to any screen.
+
+## At the booth
+
+- **Attract screen**: the menu replays a random round and shows the top 5 scores.
+- **Leaderboard**: a top-10 score asks for three initials (arrows, or type them if there is a keyboard). It lives in the browser's local storage on that machine only.
+- **Booth comparison**: from the 6th session on, the final score says "Better than X% of players at this booth", using every finished session's score on that machine.
+- **Walk-away reset**: 30 s without a click in a game or on the final score goes back to the menu.
+- **Operator keys**: `F2` fullscreen, `F4` back to the menu, `Shift+Delete` clears the leaderboard and score history (asks first).
 
 ## Layout
 

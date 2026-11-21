@@ -4,6 +4,7 @@ import { MainMenu } from './scenes/MainMenu';
 import { AUTO, Game, Scale } from 'phaser';
 import { Preloader } from './scenes/Preloader';
 import { COLORS } from './theme';
+import { installHotkeys } from './booth';
 
 const config: Phaser.Types.Core.GameConfig = {
     type: AUTO,
@@ -23,6 +24,7 @@ const config: Phaser.Types.Core.GameConfig = {
 const StartGame = (parent: string) => {
 
     const game = new Game({ ...config, parent });
+    installHotkeys(game);
     if (import.meta.env.DEV) (window as unknown as { game: Game }).game = game; // dev-only handle for debugging
     return game;
 
