@@ -50,6 +50,8 @@ class ExtractTest(unittest.TestCase):
             (0, event("game-started-round", state("g1", "round-1"))),
             (10, event("round-ended-freezetime", state("g1", "round-1"))),
             (20, event("player-used-ability", state("g1", "round-1", shift=5, trimmed=True))),
+            (30, {**event("player-killed-player", state("g1", "round-1", shift=5, trimmed=True),
+                          {"type": "player", "id": "D1"}), "target": {"type": "player", "id": "A3"}}),
             (40, event("player-completed-plantBomb", state("g1", "round-1", shift=6, trimmed=True), planter(20, 80))),
             (50, event("player-used-ability", state("g1", "round-1", shift=7, trimmed=True))),  # past reveal tail
         ])
@@ -58,6 +60,8 @@ class ExtractTest(unittest.TestCase):
         self.assertEqual(s["plant"], {"t": 30.0, "x": 20, "y": 80})
         self.assertEqual(sorted(p["side"] for p in s["players"]), ["atk"] * 5 + ["def"] * 5)
         self.assertEqual(s["map"], "testmap")
+        shooter, victim = s["kills"][0][1:]
+        self.assertEqual((s["kills"][0][0], s["players"][shooter]["side"], s["players"][victim]["side"]), (20.0, "def", "atk"))
         self.assertEqual([pt[0] for pt in s["players"][0]["track"]], [0.0, 10.0, 30.0])
         self.assertTrue(all(pt[3] for pt in s["players"][0]["track"]))  # alive carried over trimmed snapshots
         self.assertNotIn("name", json.dumps(s))  # players stay anonymous

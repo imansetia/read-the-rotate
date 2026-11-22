@@ -61,7 +61,7 @@ def extract_series(path, valid_games):
             typ = ev["type"]
 
             if typ == "game-started-round":  # also covers a replayed round: start it fresh
-                rounds[key] = {"game": g["id"], "start": None, "plant": None, "tracks": {}}
+                rounds[key] = {"game": g["id"], "start": None, "plant": None, "tracks": {}, "kills": []}
                 continue
             rec = rounds.get(key)
             if rec is None:
@@ -81,6 +81,8 @@ def extract_series(path, valid_games):
             rel = t - rec["start"]
             if rec["plant"] and rel > rec["plant"]["t"] + REVEAL_TAIL:
                 continue
+            if typ == "player-killed-player":
+                rec["kills"].append([round(rel, 1), ev["actor"]["id"], ev["target"]["id"]])
             for team in g.get("teams", []):
                 for p in team.get("players", []):
                     pos = p.get("position")
@@ -100,12 +102,15 @@ def extract_series(path, valid_games):
         # Player ids and names are dropped on purpose: the game shows anonymous dots only.
         players = [{"side": "atk" if tr["team"] == plant["team"] else "def", "track": tr["points"]}
                    for tr in rec["tracks"].values()]
+        ids = list(rec["tracks"])  # kills point at players by index: who shot whom, no names
+        kills = [[t, ids.index(a), ids.index(v)] for t, a, v in rec["kills"] if a in ids and v in ids]
         scenarios.append({
             "id": f"{path.name.split('_')[1]}-{game_id[:8]}-{round_id}",
             "map": game_map["name"],
             "bounds": game_map["bounds"],
             "plant": {"t": round(plant["t"], 1), "x": round(plant["x"]), "y": round(plant["y"])},
             "players": players,
+            "kills": kills,
         })
     return scenarios
 

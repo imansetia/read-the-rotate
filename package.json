@@ -2,6 +2,7 @@
   "name": "read-the-rotate",
   "description": "Booth mini game: read a pro VALORANT round from the radar and call the site.",
   "version": "0.1.0",
+  "type": "module",
   "license": "MIT",
   "scripts": {
     "dev": "vite --config vite/config.dev.mjs",

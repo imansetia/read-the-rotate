@@ -1,7 +1,7 @@
 import { Scene, GameObjects } from 'phaser';
 import { loadBoard } from '../booth';
-import { SITE_RADIUS, drawBomb, drawPlayers, drawSites } from '../radar';
-import { makeProjection, type Pack, type Scenario } from '../scenarios';
+import { SITE_RADIUS, drawBomb, drawCorridors, drawKills, drawPlayers, drawSites } from '../radar';
+import { ROUND_COUNT, corridorCells, makeProjection, routedTracks, type Pack, type Scenario } from '../scenarios';
 import { COLORS, HAND, LED, ledBackdrop } from '../theme';
 
 const RADAR = { x: 40, y: 180, size: 480 };
@@ -11,6 +11,7 @@ const HOLD_SECONDS = 2.5; // answer stays on screen before the next replay
 /** Attract screen: a real round replays on the left while the top scores sit on the right. */
 export class MainMenu extends Scene
 {
+    mapGfx: GameObjects.Graphics;
     gfx: GameObjects.Graphics;
     dotLabels: GameObjects.Text[];
     siteLabels: GameObjects.Text[];
@@ -26,6 +27,7 @@ export class MainMenu extends Scene
         ledBackdrop(this);
         this.add.text(512, 96, 'READ THE ROTATE', { fontFamily: LED, fontSize: '72px', color: COLORS.amberText }).setOrigin(0.5);
 
+        this.mapGfx = this.add.graphics();
         this.gfx = this.add.graphics();
         this.dotLabels = Array.from({ length: 10 }, () => this.add.text(0, 0, '', { fontFamily: HAND, fontSize: '15px' }).setOrigin(0.5));
         this.siteLabels = Array.from({ length: 3 }, () =>
@@ -38,7 +40,7 @@ export class MainMenu extends Scene
         const col = { fontFamily: HAND, color: COLORS.text, wordWrap: { width: 420 } };
         this.add.text(570, 180, `${demo ? 'Demo rounds (made up, no match data).' : 'Real pro rounds.'} Can you call the site before they plant?`,
             { ...col, fontSize: '25px' });
-        this.add.text(570, 268, '10 rounds, 6 seconds each. Click the site you think they will hit.',
+        this.add.text(570, 268, `${ROUND_COUNT} rounds, 6 seconds each. Click the site you think they will hit. Watch for rotates.`,
             { ...col, fontSize: '20px', color: COLORS.label });
 
         this.add.text(570, 360, 'TOP SCORES', { fontFamily: LED, fontSize: '22px', color: COLORS.label });
@@ -64,6 +66,8 @@ export class MainMenu extends Scene
             scenario, from: Math.min(...Object.values(scenario.snaps)), start: this.game.loop.time, unitPx,
             project: (x, y) => { const p = project(x, y); return { x: RADAR.x + p.x, y: RADAR.y + p.y }; },
         };
+        drawCorridors(this.mapGfx, corridorCells(pack, scenario.map), this.replay.project, unitPx);
+        routedTracks(pack, scenario); // routes cached before the first frame draws them
     }
 
     update ()
@@ -78,7 +82,9 @@ export class MainMenu extends Scene
         const sites = (this.registry.get('pack') as Pack).maps[scenario.map].sites;
         drawSites(g, this.siteLabels, sites, project, unitPx, label =>
             (t >= end && label === scenario.site ? { color: COLORS.goodHex, strong: true } : { color: COLORS.amber, strong: false }));
-        drawPlayers(g, this.dotLabels, scenario, Math.min(t, end), true, project);
+        const routes = routedTracks(this.registry.get('pack') as Pack, scenario);
+        drawKills(g, scenario, Math.min(t, end), routes, project);
+        drawPlayers(g, this.dotLabels, scenario, Math.min(t, end), routes, project);
         drawBomb(g, scenario, Math.min(t, end), project);
     }
 }

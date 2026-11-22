@@ -1,9 +1,10 @@
 // Radar drawing shared by the game and the menu's attract replay.
 import type { GameObjects } from 'phaser';
-import { FRESH_SECONDS, UNKNOWN_SECONDS, lastSeen, positionAt, type Scenario, type Site } from './scenarios';
+import { FRESH_SECONDS, UNKNOWN_SECONDS, lastSeen, positionAt, type Route, type Scenario, type Site } from './scenarios';
 import { COLORS, dotRing, magnet } from './theme';
 
 export const SITE_RADIUS = 1800; // world units, about 18 m
+const KILL_SECONDS = 4; // round time a shot line stays up: one real second at the reveal's 4x
 type Project = (x: number, y: number) => { x: number; y: number };
 export interface SiteLook { color: number; strong: boolean }
 
@@ -21,20 +22,22 @@ export function drawSites (g: GameObjects.Graphics, labels: GameObjects.Text[], 
     });
 }
 
-/** Players at time t: true positions in a replay, last sightings (with their age) while someone is reading the round. */
+/** Players at time t: positions along the routed tracks in a replay, last sightings (with their age) while someone is reading the round. */
 export function drawPlayers (g: GameObjects.Graphics, labels: GameObjects.Text[], scenario: Scenario, t: number,
-    replay: boolean, project: Project)
+    replay: Route[] | undefined, project: Project)
 {
     scenario.players.forEach((player, i) => {
         const atk = player.side === 'atk';
         const color = atk ? COLORS.atk : COLORS.def;
         const label = labels[i].setText('').setColor(atk ? COLORS.atkText : COLORS.defText);
-        const seen = replay ? { ...positionAt(player.track, t), age: 0 } : lastSeen(player.track, t);
+        // Replay walks the routed tracks; while reading, only real sightings count.
+        // An unknown stretch of the replay looks like a stale sighting: parked where last seen, ring and age.
+        const seen = replay ? replayAt(replay[i], t) : lastSeen(player.track, t);
         if (!seen) return;
         const p = project(seen.x, seen.y);
         label.setPosition(p.x, p.y - 22);
         if (!seen.alive) {
-            g.lineStyle(3, COLORS.dead).lineBetween(p.x - 7, p.y - 7, p.x + 7, p.y + 7).lineBetween(p.x + 7, p.y - 7, p.x - 7, p.y + 7);
+            g.lineStyle(3, atk ? COLORS.atkDead : COLORS.defDead).lineBetween(p.x - 7, p.y - 7, p.x + 7, p.y + 7).lineBetween(p.x + 7, p.y - 7, p.x - 7, p.y + 7);
         } else if (seen.age < FRESH_SECONDS) {
             magnet(g, p.x, p.y, color, atk ? COLORS.atkRim : COLORS.defRim);
         } else if (seen.age < UNKNOWN_SECONDS) {
@@ -45,6 +48,37 @@ export function drawPlayers (g: GameObjects.Graphics, labels: GameObjects.Text[]
             label.setText('?').setPosition(p.x, p.y);
         }
     });
+}
+
+function replayAt (route: Route, t: number)
+{
+    const gap = route.hidden.find(([from, to]) => t > from && t < to);
+    return gap ? { ...positionAt(route.track, gap[0]), age: t - gap[0] } : { ...positionAt(route.track, t), age: 0 };
+}
+
+/** Each kill as a dotted line from the shooter to the victim, in the shooter's colour, fading out. */
+export function drawKills (g: GameObjects.Graphics, scenario: Scenario, t: number, replay: Route[], project: Project)
+{
+    for (const [at, shooter, victim] of scenario.kills ?? []) {
+        const fade = 1 - (t - at) / KILL_SECONDS;
+        if (fade <= 0 || fade > 1) continue;
+        const a = replayAt(replay[shooter], at), b = replayAt(replay[victim], at);
+        const from = project(a.x, a.y), to = project(b.x, b.y);
+        const n = Math.max(2, Math.round(Math.hypot(to.x - from.x, to.y - from.y) / 6));
+        g.fillStyle(scenario.players[shooter].side === 'atk' ? COLORS.atkShot : COLORS.defShot, Math.min(1, 2 * fade)); // full strength for the first half
+        for (let k = 0; k <= n; k++) g.fillCircle(from.x + ((to.x - from.x) * k) / n, from.y + ((to.y - from.y) * k) / n, 2.8);
+    }
+}
+
+/** The map's walkable corridors as dim LED dots, drawn once per round on their own layer. */
+export function drawCorridors (g: GameObjects.Graphics, cells: [number, number][], project: Project, unitPx: number)
+{
+    g.clear().fillStyle(COLORS.corridor);
+    const r = Math.max(1, 150 * unitPx * 0.3); // a third of a 1.5 m cell
+    for (const [x, y] of cells) {
+        const p = project(x, y);
+        g.fillCircle(p.x, p.y, r);
+    }
 }
 
 export function drawBomb (g: GameObjects.Graphics, scenario: Scenario, t: number, project: Project)

@@ -38,7 +38,7 @@ export class GameOver extends Scene
         const letters = [0, 0, 0];
         let slot = 0;
         const ui: GameObjects.GameObject[] = [];
-        ui.push(this.add.text(512, 340, `Top ${BOARD_SIZE}! Enter your initials.`, {
+        ui.push(this.add.text(512, 340, `Top ${BOARD_SIZE}! Type your initials or use the arrows.`, {
             fontFamily: HAND, fontSize: '28px', color: COLORS.good,
         }).setOrigin(0.5));
         const gfx = this.add.graphics();
@@ -78,6 +78,7 @@ export class GameOver extends Scene
         // Plain DOM events, not Phaser's keyboard: Phaser 4.0.0 replays earlier keys when several arrive in one
         // frame (K, Enter typed fast saved "KKA").
         window.addEventListener('keydown', onKey);
+        this.game.canvas.focus(); // ready to type without clicking first
         this.events.once('shutdown', () => window.removeEventListener('keydown', onKey)); // walk-away reset or F4
         save.on('pointerdown', done);
         render();

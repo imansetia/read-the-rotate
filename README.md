@@ -2,19 +2,21 @@
 
 Booth mini game for the **Cloud9 x JetBrains: Sky's The Limit Hackathon 2026**, Category 3 (Event Mini Game).
 
-You see a pro VALORANT round on an abstract radar, 12 to 30 seconds before the plant. You call the site with one click. Then the round plays out and shows whether you read it like a pro. Ten rounds, about two minutes.
+You see a pro VALORANT round on an abstract radar, 12 to 30 seconds before the plant. You call the site with one click. Then the round plays out and shows whether you read it like a pro. Twenty rounds, about four minutes.
 
 ## How a session plays
 
-`menu → 10 rounds → final score (initials if top 10) → menu`
+`menu → 20 rounds → final score (initials if top 10) → menu`
 
 Each round:
 
-1. **Read** (6 s): the radar shows attackers (red magnets), defenders (blue magnets) and the sites. A solid magnet is a fresh position; a dotted ring with a label (`6s`) is where that player was last seen; `?` means the position is too old to trust; `x` is a dead player. The map is turned so attackers start at the bottom and the sites sit side by side above them.
+1. **Read** (6 s): the radar shows attackers (red magnets), defenders (blue magnets) and the sites. A solid magnet is a fresh position; a dotted ring with a label (`6s`) is where that player was last seen; `?` means the position is too old to trust; `x` is a dead player. The map is turned so attackers start at the bottom and the sites sit side by side above them. Dim dots behind them are the map's corridors: every cell where some player in the pack has stood, so walls and chokepoints show up without any map art (computed in the browser from the loaded pack; nothing extra is stored).
 2. **Call**: click a site. No click before the LED bar runs out counts as a miss.
-3. **Reveal**: the rest of the round replays at 4x speed until the bomb (white triangle) goes down. The real site gets a green ring, a wrong call a red one.
+3. **Reveal**: the rest of the round replays at 4x speed until the bomb (white triangle) goes down. GRID only records a position when a player is in an event (median 5.6 s apart), so between two sightings the replay walks the shortest route over the corridor cells instead of a straight line through walls; one-cell gaps where nobody happened to be recorded are bridged. When no walk fits (corridors not connected in the data, or too far for the time; about 0.5% of moves) the player is not drawn through a wall: the radar parks them as a dotted "last seen" ring until the next sighting. Each kill flashes a dotted line from the shooter to the victim in the shooter's colour (from GRID's kill events), so fights are visible instead of players just dropping. The real site gets a green ring, a wrong call a red one. Next to the replay, plain facts from the data explain what was going on: who was already down and where, where the defenders stood, and who fell first after your read. No guessed reasons.
 
-Scoring: 100 for a correct call, up to +50 for calling fast, +20 per answer in a streak. Rounds 1-3 show the radar 12-16 s before the plant, rounds 4-7 at 17-22 s, rounds 8-10 at 23-30 s, so it gets harder.
+Scoring: 100 for a correct call, up to +50 for calling fast, +20 per answer in a streak. Rounds 1-6 show the radar 12-16 s before the plant, rounds 7-13 at 17-22 s, rounds 14-20 at 23-30 s, so it gets harder.
+
+Rotates: going to the site the attackers lean toward would win most rounds, so each session mixes in real rotates, rounds where the attackers clearly lined up on one site (fresh sightings, confirmed by the later data) and then planted on another: 1 of the first 6 rounds, 3 of the next 7, 4 of the last 7, shuffled. The result names them ("THEY ROTATED TO B", "YOU READ THE ROTATE"). Rounds whose read is wrong only because of stale or scattered data are left out, so a miss is never just bad data. On the pro pack a plain "go where they lean" read scores about 91% / 82% / 71% by tier without rotates.
 
 Mouse only. The canvas scales to any screen.
 

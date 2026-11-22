@@ -25,6 +25,11 @@ const StartGame = (parent: string) => {
 
     const game = new Game({ ...config, parent });
     installHotkeys(game);
+    // Phaser cancels mousedown, so a click never moves keyboard focus to the page; take it explicitly
+    // or typed initials (and the operator keys) go to whatever had focus before.
+    game.canvas.tabIndex = 0;
+    game.canvas.style.outline = 'none';
+    game.canvas.addEventListener('pointerdown', () => game.canvas.focus());
     if (import.meta.env.DEV) (window as unknown as { game: Game }).game = game; // dev-only handle for debugging
     return game;
 

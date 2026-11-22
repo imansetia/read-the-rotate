@@ -121,11 +121,18 @@ def scenario(map_name, target, rng):
     for p in rng.sample([p for p in hitters if p is not planter], rng.randint(0, 2)):
         deaths[("atk", atk.index(p))] = rng.uniform(commit + 1, plant_t + 3)
 
-    players = [{"side": side, "track": sightings(path, deaths.get((side, i)), end, gap, rng)}
-               for side, paths, gap in (("atk", atk, 2.5), ("def", dfn, 4)) for i, path in enumerate(paths)]
-    rng.shuffle(players)
+    keys = [(side, i) for side, paths in (("atk", atk), ("def", dfn)) for i in range(len(paths))]
+    rng.shuffle(keys)
+    paths = {("atk", i): p for i, p in enumerate(atk)} | {("def", i): p for i, p in enumerate(dfn)}
+    gaps = {"atk": 2.5, "def": 4}
+    players = [{"side": k[0], "track": sightings(paths[k], deaths.get(k), end, gaps[k[0]], rng)} for k in keys]
+
+    def shooter(victim, t):  # the nearest enemy still standing takes the kill
+        alive = [k for k in keys if k[0] != victim[0] and deaths.get(k, 999) > t]
+        return min(alive, key=lambda k: math.dist(at(paths[k], t), at(paths[victim], t)))
+    kills = sorted([round(t, 1), keys.index(shooter(k, t)), keys.index(k)] for k, t in deaths.items() if t <= end)
     return {"map": map_name, "site": target, "plant": {"t": round(plant_t, 1), "x": round(plant_xy[0]),
-            "y": round(plant_xy[1])}, "players": players}
+            "y": round(plant_xy[1])}, "players": players, "kills": kills}
 
 
 def main():
