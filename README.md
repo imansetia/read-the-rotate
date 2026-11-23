@@ -16,7 +16,7 @@ Each round:
 
 Scoring: 100 for a correct call, up to +50 for calling fast, +20 per answer in a streak. Rounds 1-6 show the radar 12-16 s before the plant, rounds 7-13 at 17-22 s, rounds 14-20 at 23-30 s, so it gets harder.
 
-Rotates: going to the site the attackers lean toward would win most rounds, so each session mixes in real rotates, rounds where the attackers clearly lined up on one site (fresh sightings, confirmed by the later data) and then planted on another: 1 of the first 6 rounds, 3 of the next 7, 4 of the last 7, shuffled. The result names them ("THEY ROTATED TO B", "YOU READ THE ROTATE"). Rounds whose read is wrong only because of stale or scattered data are left out, so a miss is never just bad data. On the pro pack a plain "go where they lean" read scores about 91% / 82% / 71% by tier without rotates.
+Rotates: going to the site the attackers lean toward would win most rounds, so each session mixes in real rotates, rounds where the attackers clearly lined up on one site (fresh sightings, confirmed by the later data) and then planted on another: 1 of the first 6 rounds, 3 of the next 7, 4 of the last 7, shuffled. The synthetic demo pack has fewer rotates (none early), so a demo session fills those slots with plain rounds and shows about 6 or 7. The result names them ("THEY ROTATED TO B", "YOU READ THE ROTATE"). Rounds whose read is wrong only because of stale or scattered data are left out, so a miss is never just bad data. On the pro pack a plain "go where they lean" read scores about 91% / 82% / 71% by tier without rotates.
 
 Mouse only. The canvas scales to any screen.
 
@@ -42,7 +42,7 @@ hackathon/
 
 ## Run the game
 
-Requires Node 22+.
+Requires Node 22.18+ (the tests run the `.ts` files directly).
 
 ```bash
 npm install

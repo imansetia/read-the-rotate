@@ -66,6 +66,17 @@ class ExtractTest(unittest.TestCase):
         self.assertTrue(all(pt[3] for pt in s["players"][0]["track"]))  # alive carried over trimmed snapshots
         self.assertNotIn("name", json.dumps(s))  # players stay anonymous
 
+    def test_out_of_order_events_give_tracks_in_time_order(self):
+        found = self.run_feed([
+            (0, event("game-started-round", state("g1", "round-1"))),
+            (10, event("round-ended-freezetime", state("g1", "round-1"))),
+            (20, event("player-used-ability", state("g1", "round-1", shift=5, trimmed=True))),
+            (18, event("player-used-ability", state("g1", "round-1", shift=3, trimmed=True))),  # arrives late
+            (40, event("player-completed-plantBomb", state("g1", "round-1", shift=6, trimmed=True), planter(20, 80))),
+        ])
+        track = found[0]["players"][0]["track"]
+        self.assertEqual([(pt[0], pt[1]) for pt in track], [(0.0, 0), (8.0, 3), (10.0, 5), (30.0, 6)])
+
     def test_rolled_back_plant_and_unknown_game_are_skipped(self):
         found = self.run_feed([
             (0, event("game-started-round", state("g1", "round-1"))),

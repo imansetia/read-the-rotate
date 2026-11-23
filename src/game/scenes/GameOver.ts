@@ -71,9 +71,10 @@ export class GameOver extends Scene
         };
         const done = () => {
             window.removeEventListener('keydown', onKey);
-            saveBoard(insert(loadBoard(), { name: letters.map(i => LETTERS[i]).join(''), score }));
+            const board = insert(loadBoard(), { name: letters.map(i => LETTERS[i]).join(''), score });
+            saveBoard(board);
             ui.forEach(o => o.destroy());
-            this.showBoard(rank);
+            this.showBoard(rank, board); // the board we just made, even if storage refused to save it
         };
         // Plain DOM events, not Phaser's keyboard: Phaser 4.0.0 replays earlier keys when several arrive in one
         // frame (K, Enter typed fast saved "KKA").
@@ -84,9 +85,8 @@ export class GameOver extends Scene
         render();
     }
 
-    showBoard (highlight: number)
+    showBoard (highlight: number, board = loadBoard())
     {
-        const board = loadBoard();
         this.add.text(512, 340, 'TOP SCORES', { fontFamily: LED, fontSize: '22px', color: COLORS.label }).setOrigin(0.5);
         const rows = board.slice(0, 5).map((e, i) => [i, e] as const);
         if (highlight >= 5) rows.push([highlight, board[highlight]]); // keep the new entry visible even below the top 5

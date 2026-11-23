@@ -44,6 +44,15 @@ def active_game(series_state, valid_games):
     return (started or games or [None])[0]
 
 
+def in_order(points):
+    """GRID's occurredAt is sometimes up to a second out of order: sort by time, then drop repeats again."""
+    out = []
+    for p in sorted(points, key=lambda p: p[0]):
+        if not out or out[-1][1:] != p[1:]:
+            out.append(p)
+    return out
+
+
 def extract_series(path, valid_games):
     """Scenarios (without site labels) for one series file."""
     rounds = {}  # (game_id, round_id) -> working record
@@ -100,10 +109,10 @@ def extract_series(path, valid_games):
         if not plant or not game_map or len(rec["tracks"]) != 10:
             continue
         # Player ids and names are dropped on purpose: the game shows anonymous dots only.
-        players = [{"side": "atk" if tr["team"] == plant["team"] else "def", "track": tr["points"]}
+        players = [{"side": "atk" if tr["team"] == plant["team"] else "def", "track": in_order(tr["points"])}
                    for tr in rec["tracks"].values()]
         ids = list(rec["tracks"])  # kills point at players by index: who shot whom, no names
-        kills = [[t, ids.index(a), ids.index(v)] for t, a, v in rec["kills"] if a in ids and v in ids]
+        kills = [[t, ids.index(a), ids.index(v)] for t, a, v in sorted(rec["kills"]) if a in ids and v in ids]
         scenarios.append({
             "id": f"{path.name.split('_')[1]}-{game_id[:8]}-{round_id}",
             "map": game_map["name"],

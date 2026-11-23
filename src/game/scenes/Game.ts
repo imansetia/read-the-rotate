@@ -79,9 +79,10 @@ export class Game extends Scene
 
     startRound ()
     {
+        const before = performance.now();
         this.setProjection(this.round);
         this.phase = 'choose';
-        this.phaseStart = this.game.loop.time;
+        this.phaseStart = this.game.loop.time + (performance.now() - before); // the route work above must not eat into the 6 s
         this.picked = undefined;
         this.prompt.setText('WHERE WILL THEY PLANT?').setColor(COLORS.amberText);
         this.facts.setText('');

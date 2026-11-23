@@ -149,7 +149,7 @@ def main():
     maps = {name: {"bounds": BOUNDS, "sites": [{"label": k, "x": v[0][0], "y": v[0][1]} for k, v in sites.items()]}
             for name, sites in MAPS.items()}
     tiers = {t: sum(t in s["snaps"] for s in scenarios) for t in "123"}
-    assert all(n >= 10 for n in tiers.values()), tiers  # a session needs 3/4/3, keep some variety
+    assert all(n >= 10 for n in tiers.values()), tiers  # a session needs 6/7/7, keep some variety
     OUT.parent.mkdir(parents=True, exist_ok=True)
     OUT.write_text(json.dumps({"maps": maps, "scenarios": scenarios}, separators=(",", ":")), encoding="utf-8")
     print(f"Wrote {len(scenarios)} demo scenarios to {OUT} ({OUT.stat().st_size // 1024} KB), tiers {tiers}")

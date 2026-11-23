@@ -113,7 +113,8 @@ export function installHotkeys (game: Game)
 {
     const toMenu = () => {
         if (!game.registry.get('pack')) return; // still loading
-        game.scene.getScenes(true).forEach(s => s.scene.stop());
+        // The manager's stop runs now; a scene's own stop is queued and would close the menu we are about to open.
+        game.scene.getScenes(true).forEach(s => game.scene.stop(s.scene.key));
         game.scene.start('MainMenu');
     };
     window.addEventListener('keydown', e => {
