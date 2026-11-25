@@ -76,7 +76,7 @@ Set `STL_DATA_DIR` if the data repo is somewhere else.
 
 ## Data guard
 
-Git hooks in `.githooks/` block commits that contain GRID data or packs built from it, and commit messages that credit AI tools as co-authors. Enable them once per clone:
+Git hooks in `.githooks/` block commits that contain GRID data or packs built from it. Enable them once per clone:
 
 ```bash
 git config core.hooksPath .githooks
