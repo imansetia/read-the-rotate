@@ -39,3 +39,5 @@ stl-hackathon-2026-grid-starter/
 # Scenario packs generated from GRID data
 public/packs/pro/
 pipeline/out/
+# Local knowledge graph (graphify)
+graphify-out/
