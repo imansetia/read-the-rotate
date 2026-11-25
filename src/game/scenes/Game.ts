@@ -2,6 +2,7 @@ import { Scene, GameObjects } from 'phaser';
 import { idleReset } from '../booth';
 import { SITE_RADIUS, drawBomb, drawCorridors, drawKills, drawPlayers, drawSites } from '../radar';
 import { CHOOSE_SECONDS, corridorCells, makeProjection, pickRounds, roundFacts, routedTracks, scoreFor, type Pack, type Round } from '../scenarios';
+import { sfx } from '../sound';
 import { COLORS, HAND, LED, ledBackdrop } from '../theme';
 
 const RADAR = { x: 32, y: 60, size: 660 };
@@ -20,6 +21,8 @@ export class Game extends Scene
     phase: Phase;
     phaseStart: number;
     picked?: string;
+    lastTick: number; // whole seconds left at the last countdown tick
+    lastNow: number; // replay time at the previous frame, to catch kills and the plant as they pass
     gained: number;
     project: (x: number, y: number) => { x: number; y: number };
     unitPx: number;
@@ -84,6 +87,7 @@ export class Game extends Scene
         this.phase = 'choose';
         this.phaseStart = this.game.loop.time + (performance.now() - before); // the route work above must not eat into the 6 s
         this.picked = undefined;
+        this.lastTick = CHOOSE_SECONDS;
         this.prompt.setText('WHERE WILL THEY PLANT?').setColor(COLORS.amberText);
         this.facts.setText('');
         this.legend.forEach(l => l.setVisible(true));
@@ -111,7 +115,10 @@ export class Game extends Scene
             .map(s => ({ s, d: Math.hypot(this.project(s.x, s.y).x - x, this.project(s.x, s.y).y - y) }))
             .filter(h => h.d < SITE_RADIUS * this.unitPx * 1.4)
             .sort((a, b) => a.d - b.d)[0];
-        if (hit) this.resolve(hit.s.label, secondsLeft);
+        if (hit) {
+            sfx.select();
+            this.resolve(hit.s.label, secondsLeft);
+        }
     }
 
     secondsLeft () { return CHOOSE_SECONDS - (this.game.loop.time - this.phaseStart) / 1000; }
@@ -126,6 +133,7 @@ export class Game extends Scene
         this.picked = site;
         this.phase = 'reveal';
         this.phaseStart = this.game.loop.time;
+        this.lastNow = this.round.t;
         this.prompt.setText(site ? `YOU CALLED ${site}. WATCH...` : 'TIME IS UP. WATCH...');
         const { scenario, t } = this.round;
         this.facts.setText(roundFacts((this.registry.get('pack') as Pack).maps[scenario.map], scenario, t).join('\n\n'));
@@ -139,10 +147,17 @@ export class Game extends Scene
         const end = scenario.plant.t + 1;
 
         if (this.phase === 'choose') {
+            const left = Math.ceil(CHOOSE_SECONDS - elapsed);
+            if (left < this.lastTick && left <= 3 && left > 0) sfx.tick(); // the last three seconds
+            this.lastTick = left;
             if (elapsed >= CHOOSE_SECONDS) this.resolve(undefined, 0);
             else this.draw(t, false);
         } else if (this.phase === 'reveal') {
             const now = Math.min(t + elapsed * REVEAL_SPEED, end);
+            const passed = (at: number) => at > this.lastNow && at <= now;
+            if ((scenario.kills ?? []).some(([at]) => passed(at))) sfx.kill();
+            if (passed(scenario.plant.t)) sfx.plant();
+            this.lastNow = now;
             this.draw(now, true);
             if (now >= end) {
                 this.phase = 'result';
@@ -154,6 +169,8 @@ export class Game extends Scene
                     ? (rotate ? `YOU READ THE ROTATE +${this.gained}` : `CORRECT +${this.gained}`)
                     : (rotate ? `THEY ROTATED TO ${scenario.site}` : `THEY PLANTED ON ${scenario.site}`));
                 this.prompt.setColor(right ? COLORS.good : COLORS.bad);
+                if (right) sfx.correct(rotate);
+                else sfx.wrong();
             }
         } else if (elapsed < RESULT_SECONDS) {
             this.draw(end, true); // same frame as the reveal's last, now with the answer rings

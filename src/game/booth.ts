@@ -1,6 +1,7 @@
 // Things a booth needs that a normal game does not: a local leaderboard, a reset when players walk away,
 // and keys for the operator.
 import type { Game, Scene } from 'phaser';
+import { toggleMute } from './sound.ts'; // .ts: the node test runner imports this file directly
 
 export interface Entry { name: string; score: number }
 export const BOARD_SIZE = 10;
@@ -108,7 +109,7 @@ export function idleReset (scene: Scene, seconds: number)
     });
 }
 
-/** Operator keys: F2 fullscreen, F4 back to the menu, Shift+Delete clears the leaderboard and score history. */
+/** Operator keys: F2 fullscreen, F4 back to the menu, M sound on/off, Shift+Delete clears the leaderboard and score history. */
 export function installHotkeys (game: Game)
 {
     const toMenu = () => {
@@ -120,6 +121,7 @@ export function installHotkeys (game: Game)
     window.addEventListener('keydown', e => {
         if (e.key === 'F2') game.scale.toggleFullscreen();
         else if (e.key === 'F4') toMenu();
+        else if (e.key.toLowerCase() === 'm' && !e.repeat && !game.scene.isActive('GameOver')) toggleMute(); // M is a letter there: initials
         else if (e.key === 'Delete' && e.shiftKey && window.confirm('Clear the leaderboard and score history?')) {
             saveBoard([]);
             memoryScores = [];

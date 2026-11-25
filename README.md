@@ -18,7 +18,7 @@ Scoring: 100 for a correct call, up to +50 for calling fast, +20 per answer in a
 
 Rotates: going to the site the attackers lean toward would win most rounds, so each session mixes in real rotates, rounds where the attackers clearly lined up on one site (fresh sightings, confirmed by the later data) and then planted on another: 1 of the first 6 rounds, 3 of the next 7, 4 of the last 7, shuffled. The synthetic demo pack has fewer rotates (none early), so a demo session fills those slots with plain rounds and shows about 6 or 7. The result names them ("THEY ROTATED TO B", "YOU READ THE ROTATE"). Rounds whose read is wrong only because of stale or scattered data are left out, so a miss is never just bad data. On the pro pack a plain "go where they lean" read scores about 91% / 82% / 71% by tier without rotates.
 
-Mouse only. The canvas scales to any screen.
+Mouse or touch. The canvas scales to any screen.
 
 ## At the booth
 
@@ -26,7 +26,8 @@ Mouse only. The canvas scales to any screen.
 - **Leaderboard**: a top-10 score asks for three initials (arrows, or type them if there is a keyboard). It lives in the browser's local storage on that machine only.
 - **Booth comparison**: from the 6th session on, the final score says "Better than X% of players at this booth", using every finished session's score on that machine.
 - **Walk-away reset**: 30 s without a click in a game or on the final score goes back to the menu.
-- **Operator keys**: `F2` fullscreen, `F4` back to the menu, `Shift+Delete` clears the leaderboard and score history (asks first).
+- **Operator keys**: `F2` fullscreen, `F4` back to the menu, `M` sound on/off (remembered on that machine; the menu shows SOUND OFF), `Shift+Delete` clears the leaderboard and score history (asks first).
+- **Sound**: short beeps made in code with Web Audio (no audio files, works offline): a tick in the last 3 s, a click on your call, a pop for each kill and a beep for the plant in the replay, a chime for a correct call (longer for a read rotate), a low buzz for a miss, and a fanfare on the final score. The attract screen stays silent. Browsers keep sound off until the first click; for a kiosk that should be heard from the start, launch Chrome with `--autoplay-policy=no-user-gesture-required`.
 
 ## Layout
 

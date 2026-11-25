@@ -2,6 +2,7 @@ import { Scene, GameObjects } from 'phaser';
 import { loadBoard } from '../booth';
 import { SITE_RADIUS, drawBomb, drawCorridors, drawKills, drawPlayers, drawSites } from '../radar';
 import { ROUND_COUNT, corridorCells, makeProjection, routedTracks, type Pack, type Scenario } from '../scenarios';
+import { isMuted } from '../sound';
 import { COLORS, HAND, LED, ledBackdrop } from '../theme';
 
 const RADAR = { x: 40, y: 180, size: 480 };
@@ -15,6 +16,7 @@ export class MainMenu extends Scene
     gfx: GameObjects.Graphics;
     dotLabels: GameObjects.Text[];
     siteLabels: GameObjects.Text[];
+    soundOff: GameObjects.Text;
     replay: { scenario: Scenario; from: number; start: number; project: (x: number, y: number) => { x: number; y: number }; unitPx: number };
 
     constructor ()
@@ -52,6 +54,7 @@ export class MainMenu extends Scene
         const start = this.add.text(780, 650, 'CLICK TO START', { fontFamily: LED, fontSize: '36px', color: COLORS.amberText }).setOrigin(0.5);
         this.time.addEvent({ delay: 600, loop: true, callback: () => start.setVisible(!start.visible) }); // LED blink, not a fade
 
+        this.soundOff = this.add.text(1004, 748, 'SOUND OFF (M)', { fontFamily: LED, fontSize: '16px', color: COLORS.label }).setOrigin(1);
         this.nextReplay();
         this.input.once('pointerdown', () => this.scene.start('Game'));
     }
@@ -72,6 +75,7 @@ export class MainMenu extends Scene
 
     update ()
     {
+        this.soundOff.setVisible(isMuted());
         const { scenario, from, start, project, unitPx } = this.replay;
         const end = scenario.plant.t + 1;
         const t = from + ((this.game.loop.time - start) / 1000) * REPLAY_SPEED;

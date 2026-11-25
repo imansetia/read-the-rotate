@@ -1,5 +1,6 @@
 import { Scene, GameObjects } from 'phaser';
 import { BOARD_SIZE, betterThan, idleReset, insert, loadBoard, rankOf, recordScore, saveBoard } from '../booth';
+import { sfx } from '../sound';
 import { COLORS, HAND, LED, ledBackdrop } from '../theme';
 
 const LETTERS = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
@@ -25,6 +26,7 @@ export class GameOver extends Scene
                 fontFamily: HAND, fontSize: '24px', color: COLORS.good,
             }).setOrigin(0.5);
         }
+        sfx.fanfare();
         idleReset(this, 30); // a player who walks off without initials does not block the next one
 
         const rank = rankOf(loadBoard(), score);
