@@ -25,6 +25,8 @@ MAPS = {
 }
 PER_MAP = 30
 SPEED = 450  # world units per second, a jog with stops
+CONTACT = 1500  # world units (about 15 m): attackers this close to a defender fight him
+TRADE = 0.35  # chance a defender caught by a group still takes one attacker down first
 
 
 def jitter(p, r, rng):
@@ -104,33 +106,50 @@ def scenario(map_name, target, rng):
     plant_t = arrival(planter) + 4  # planting takes a few seconds
     end = plant_t + REVEAL_TAIL
 
-    # Defenders hold their sites; the ones elsewhere rotate a few seconds after the hit starts.
+    # Defenders hold their sites; the ones elsewhere rotate as soon as the hit starts.
     site_xy = [s[0] for s in sites.values()]
     anchors = site_xy * 2 + [MID] if len(sites) == 2 else site_xy + rng.sample(site_xy, 2)
     dfn = []
     for a in anchors:
         path = go([(0, *jitter(DEF_SPAWN, 500, rng))], [(jitter(a, 1200, rng), 0)], rng)
         if a != site:
-            path = go(wait(path, commit + rng.uniform(1, 5)), [(jitter(site, 1500, rng), 0)], rng)
+            path = go(wait(path, commit + rng.uniform(0, 2)), [(jitter(site, 1500, rng), 0)], rng)
         dfn.append(path)
 
-    # Fights during the hit: some defenders on the target and a hitter or two go down.
-    deaths = {}
-    for i in rng.sample([i for i, a in enumerate(anchors) if a == site], rng.randint(1, anchors.count(site))):
-        deaths[("def", i)] = rng.uniform(commit + 2, plant_t)
-    for p in rng.sample([p for p in hitters if p is not planter], rng.randint(0, 2)):
-        deaths[("atk", atk.index(p))] = rng.uniform(commit + 1, plant_t + 3)
-
-    keys = [(side, i) for side, paths in (("atk", atk), ("def", dfn)) for i in range(len(paths))]
-    rng.shuffle(keys)
     paths = {("atk", i): p for i, p in enumerate(atk)} | {("def", i): p for i, p in enumerate(dfn)}
-    gaps = {"atk": 2.5, "def": 4}
-    players = [{"side": k[0], "track": sightings(paths[k], deaths.get(k), end, gaps[k[0]], rng)} for k in keys]
+    planter_key = ("atk", atk.index(planter))
+    deaths = {}  # player -> (time, who shot them)
+    alive = lambda k, t: k not in deaths or deaths[k][0] > t
 
-    def shooter(victim, t):  # the nearest enemy still standing takes the kill
-        alive = [k for k in keys if k[0] != victim[0] and deaths.get(k, 999) > t]
-        return min(alive, key=lambda k: math.dist(at(paths[k], t), at(paths[victim], t)))
-    kills = sorted([round(t, 1), keys.index(shooter(k, t)), keys.index(k)] for k, t in deaths.items() if t <= end)
+    # Fights happen where players meet: walk the round and resolve each contact. Caught by a group, a defender goes
+    # down, sometimes taking one attacker first. One on one is a coin flip, but a defender wins at most one duel
+    # (more would thin the attack out until no fake could still turn into a rotate). The bomb carrier always lives.
+    won = set()
+    t = 0.0
+    while t < plant_t:
+        for d in [k for k in paths if k[0] == "def" and k not in deaths]:  # a death is final
+            near = sorted((a for a in paths if a[0] == "atk" and alive(a, t)
+                           and math.dist(at(paths[a], t), at(paths[d], t)) < CONTACT),
+                          key=lambda a: math.dist(at(paths[a], t), at(paths[d], t)))
+            if not near:
+                continue
+            if len(near) == 1 and near[0] != planter_key and d not in won and rng.random() < 0.5:
+                deaths[near[0]] = (t, d)  # the defender wins the duel
+                won.add(d)
+                continue
+            first = [a for a in near if a != planter_key]
+            if len(near) > 1 and first and rng.random() < TRADE:
+                deaths[first[0]] = (t, d)  # he takes one down before the rest of the group gets him
+                near.remove(first[0])
+            deaths[d] = (t + 0.4, near[0])
+        t += 0.25
+
+    keys = [(side, i) for side, ps in (("atk", atk), ("def", dfn)) for i in range(len(ps))]
+    rng.shuffle(keys)
+    gaps = {"atk": 2.5, "def": 4}
+    died = {k: when for k, (when, _) in deaths.items()}
+    players = [{"side": k[0], "track": sightings(paths[k], died.get(k), end, gaps[k[0]], rng)} for k in keys]
+    kills = sorted([round(when, 1), keys.index(by), keys.index(k)] for k, (when, by) in deaths.items() if when <= end)
     return {"map": map_name, "site": target, "plant": {"t": round(plant_t, 1), "x": round(plant_xy[0]),
             "y": round(plant_xy[1])}, "players": players, "kills": kills}
 

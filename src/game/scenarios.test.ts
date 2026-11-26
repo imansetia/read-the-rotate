@@ -60,6 +60,7 @@ test('the committed demo pack can fill a session', () => {
     const pack = JSON.parse(readFileSync(new URL('../../public/packs/demo/scenarios.json', import.meta.url), 'utf8')) as Pack;
     const rounds = pickRounds(pack);
     assert.equal(rounds.length, ROUND_COUNT);
+    assert.ok(rounds.filter(r => r.rotate).length >= 4, 'a demo session still shows real rotates'); // pickRounds would quietly fill with plain rounds
     for (const { scenario } of rounds) {
         assert.ok(pack.maps[scenario.map].sites.some(s => s.label === scenario.site));
         assert.equal(scenario.players.length, 10);
