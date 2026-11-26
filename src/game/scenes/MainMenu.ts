@@ -40,9 +40,10 @@ export class MainMenu extends Scene
         });
 
         const col = { fontFamily: HAND, color: COLORS.text, wordWrap: { width: 420 } };
-        this.add.text(570, 180, `${demo ? 'Demo rounds (made up, no match data).' : 'Real pro rounds.'} Can you call the site before they plant?`,
+        const intro = this.add.text(570, 180, `${demo ? 'Demo rounds (made up, no match data).' : 'Real pro rounds.'} Can you call the site before they plant?`,
             { ...col, fontSize: '25px' });
-        this.add.text(570, 268, `${ROUND_COUNT} rounds, 6 seconds each. Click the site you think they will hit. Watch for rotates.`,
+        // The demo wording wraps to three lines: start below it instead of at a fixed height.
+        this.add.text(570, Math.max(268, intro.y + intro.height + 12), `${ROUND_COUNT} rounds, 6 seconds each. Click the site you think they will hit. Watch for rotates.`,
             { ...col, fontSize: '20px', color: COLORS.label });
 
         this.add.text(570, 360, 'TOP SCORES', { fontFamily: LED, fontSize: '22px', color: COLORS.label });

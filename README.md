@@ -4,6 +4,8 @@ Booth mini game for the **Cloud9 x JetBrains: Sky's The Limit Hackathon 2026**, 
 
 You see a pro VALORANT round on an abstract radar, 12 to 30 seconds before the plant. You call the site with one click. Then the round plays out and shows whether you read it like a pro. Twenty rounds, about four minutes.
 
+**Play the demo:** https://imansetia.github.io/read-the-rotate/ (invented demo rounds; the pro rounds need the GRID data, see [Data pipeline](#data-pipeline)). Every push to `main` rebuilds it through `.github/workflows/pages.yml`, which refuses to publish if a pro pack ever lands in the build.
+
 ## How a session plays
 
 `menu → 20 rounds → final score (initials if top 10) → menu`
